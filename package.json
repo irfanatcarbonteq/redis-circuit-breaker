@@ -11,7 +11,7 @@
     "test": "jest --passWithNoTests"
   },
   "publishConfig": {
-    "irfanatcarbonteq:registry": "https://npm.pkg.github.com"
+    "@OWNER:registry": "https://npm.pkg.github.com"
   },
   "author": "Carbonteq",
   "license": "ISC",
