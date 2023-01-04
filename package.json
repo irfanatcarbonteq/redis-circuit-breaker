@@ -1,6 +1,6 @@
 {
   "name": "redis-sampling-breaker",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "",
   "main": "build/index.js",
   "scripts": {
@@ -13,6 +13,10 @@
   "publishConfig": {
     "@OWNER:registry": "https://npm.pkg.github.com"
   },
+  "bugs": {
+    "url": "https://github.com/irfanatcarbonteq/redis-circuit-breaker/issues"
+  },
+  "homepage": "https://github.com/irfanatcarbonteq/redis-circuit-breaker#readme",
   "author": "Carbonteq",
   "license": "ISC",
   "dependencies": {
