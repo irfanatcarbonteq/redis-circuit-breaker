@@ -27,7 +27,7 @@ const retry = retry(handleAll, { maxAttempts: 3, backoff: new ExponentialBackoff
 // to recover without getting tons of traffic.
 const circuitBreaker = circuitBreaker(handleAll, {
   halfOpenAfter: 10 * 1000,
-  breaker: new new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
+  breaker: new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
 });
 
 // Combine these! Create a policy that retries 3 times, calling through the circuit breaker
