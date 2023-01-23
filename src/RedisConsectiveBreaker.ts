@@ -14,12 +14,11 @@ interface IRedisBreaker {
 }
 
 export class RedisConsecutiveBreaker implements IRedisBreaker {
-  private count = 0;
 
   constructor(private readonly threshold: number) {}
 
   public success() {
-    this.count = 0;
+    redis.set("count", `0`);
   }
 
   public async failure() {
