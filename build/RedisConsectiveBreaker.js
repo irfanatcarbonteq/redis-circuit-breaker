@@ -6,10 +6,9 @@ const redis = new ioredis_1.default();
 class RedisConsecutiveBreaker {
     constructor(threshold) {
         this.threshold = threshold;
-        this.count = 0;
     }
     success() {
-        this.count = 0;
+        redis.set("count", `0`);
     }
     async failure() {
         let count = await redis.get("count");

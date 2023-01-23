@@ -16,4 +16,5 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./RedisConsectiveBreaker"), exports);
 __exportStar(require("./RedisSamplingBreaker"), exports);
+__exportStar(require("./SlidingWindowCounter"), exports);
 //# sourceMappingURL=index.js.map
