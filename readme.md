@@ -117,10 +117,8 @@ exports.handleRequest = async (req, res) => {
       ip: req.ip,
       maxWindowRequestCount: 5,
       intervalInMinutes: 1
-    });
-
-  const retryWithBreaker = wrap(redisRateLimiterPolicy);    
-  const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
+    });   
+  const data = await redisRateLimiterPolicy.execute(() =>database.getInfo(req.params.id));
   return res.json(data);
 };
 ```
