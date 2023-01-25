@@ -1,4 +1,4 @@
-import { IBreaker,CircuitState } from "cockatiel";
+import { CircuitState } from "cockatiel";
 import Redis from "ioredis";
 const redis = new Redis();
 
