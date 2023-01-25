@@ -96,7 +96,7 @@ exports.handleRequest = async (req, res) => {
 ```
 
 
-Then go forth with rate limiting policy:
+With rate limiting policy:
 
 ```js
 import {
@@ -110,10 +110,8 @@ import {
 import { database } from './my-db';
 import { RedisSamplingBreaker,redisRateLimiter } from "redis-sampling-breaker";
 
-// Create a circuit breaker that'll stop calling the executed function for 10
-// seconds if it fails 5 times in a row. This can give time for e.g. a database
-// to recover without getting tons of traffic.
-const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
+exports.handleRequest = async (req, res) => {
+  const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
       halfOpenAfter: 10 * 1000,
       breaker: new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }) ,
       ip: req.ip,
@@ -121,9 +119,7 @@ const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
       intervalInMinutes: 1
     });
 
-const retryWithBreaker = wrap(redisRateLimiterPolicy);
-
-exports.handleRequest = async (req, res) => {
+  const retryWithBreaker = wrap(redisRateLimiterPolicy);    
   const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
   return res.json(data);
 };
