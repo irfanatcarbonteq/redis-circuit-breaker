@@ -123,6 +123,46 @@ exports.handleRequest = async (req, res) => {
 };
 ```
 
+Wrap both rate limiting and sampling breaker:
+
+```js
+import * as crypto from "crypto"
+import {
+  handleAll,
+  retry,
+  circuitBreaker
+} from 'cockatiel';
+import { database } from './my-db';
+import { redisRateLimiter,RedisSamplingBreaker } from "redis-sampling-breaker";
+
+const circuitBreakerPolicy = circuitBreaker(handleAll, {
+  halfOpenAfter: 10 * 1000,
+  breaker: new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
+});
+
+const retryPolicy = retry(handleAll, {
+  maxAttempts: 3,
+  backoff: new ExponentialBackoff(),
+});
+exports.handleRequest = async (req, res) => {
+  const secret = process.env.SECRET_KEY
+    const hash = crypto
+    .createHmac('sha256', secret)
+    .update(req.ip)
+    .digest('hex')
+    const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
+      hash: hash,
+      maxWindowRequestCount: 5,
+      intervalInSeconds: 1 * 60,
+    });
+
+  
+  const retryWithBreaker = wrap(redisRateLimiterPolicy,retryPolicy,circuitBreakerPolicy);
+  const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
+  return res.json(data);
+};
+```
+
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
