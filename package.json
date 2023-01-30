@@ -1,6 +1,6 @@
 {
   "name": "redis-sampling-breaker",
-  "version": "1.0.0",
+  "version": "0.0.10",
   "description": "",
   "main": "build/index.js",
   "scripts": {
