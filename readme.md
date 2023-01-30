@@ -99,6 +99,7 @@ exports.handleRequest = async (req, res) => {
 With rate limiting policy:
 
 ```js
+import * as crypto from "crypto"
 import {
   ConsecutiveBreaker,
   ExponentialBackoff,
@@ -108,17 +109,27 @@ import {
   wrap,
 } from 'cockatiel';
 import { database } from './my-db';
-import { RedisSamplingBreaker,redisRateLimiter } from "redis-sampling-breaker";
+import { redisRateLimiter } from "redis-sampling-breaker";
+
+const retryPolicy = retry(handleAll, {
+  maxAttempts: 3,
+  backoff: new ExponentialBackoff(),
+});
 
 exports.handleRequest = async (req, res) => {
-  const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
+  const secret = 'my-secret-key'
+    const hash = crypto
+    .createHmac('sha256', secret)
+    .update(req.ip)
+    .digest('hex')
+    const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
       halfOpenAfter: 10 * 1000,
-      breaker: new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }) ,
-      ip: req.ip,
+      hash: hash,
       maxWindowRequestCount: 5,
-      intervalInMinutes: 1
-    });   
-  const data = await redisRateLimiterPolicy.execute(() =>database.getInfo(req.params.id));
+      intervalInSeconds: 1 * 60,
+    });
+  const retryWithBreaker = wrap(retryPolicy, redisRateLimiterPolicy);     
+  const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
   return res.json(data);
 };
 ```
