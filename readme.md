@@ -101,35 +101,24 @@ With rate limiting policy:
 ```js
 import * as crypto from "crypto"
 import {
-  ConsecutiveBreaker,
-  ExponentialBackoff,
-  retry,
   handleAll,
-  circuitBreaker,
-  wrap,
 } from 'cockatiel';
 import { database } from './my-db';
 import { redisRateLimiter } from "redis-sampling-breaker";
 
-const retryPolicy = retry(handleAll, {
-  maxAttempts: 3,
-  backoff: new ExponentialBackoff(),
-});
-
 exports.handleRequest = async (req, res) => {
-  const secret = 'my-secret-key'
+  const secret = process.env.SECRET_KEY
     const hash = crypto
     .createHmac('sha256', secret)
     .update(req.ip)
     .digest('hex')
     const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
-      halfOpenAfter: 10 * 1000,
       hash: hash,
       maxWindowRequestCount: 5,
       intervalInSeconds: 1 * 60,
     });
-  const retryWithBreaker = wrap(retryPolicy, redisRateLimiterPolicy);     
-  const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
+
+  const data = await redisRateLimiterPolicy.execute(() =>database.getInfo(req.params.id));
   return res.json(data);
 };
 ```

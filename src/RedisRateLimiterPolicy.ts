@@ -28,7 +28,6 @@ export const returnOrThrow = <R>(failure: FailureOrSuccess<R>) => {
 export const neverAbortedSignal = new AbortController().signal;
 
 export interface ICircuitBreakerOptions {
-  halfOpenAfter: number;
   hash: string;
   maxWindowRequestCount: Number;
   intervalInSeconds: Number;
@@ -73,7 +72,6 @@ export class RedisRateLimiterPolicy implements IPolicy {
 export function redisRateLimiter(
   policy: Policy,
   opts: {
-    halfOpenAfter: number;
     hash: string;
     maxWindowRequestCount: Number;
     intervalInSeconds: Number;
