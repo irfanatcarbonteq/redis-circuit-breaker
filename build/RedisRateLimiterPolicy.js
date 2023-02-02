@@ -24,7 +24,7 @@ class RedisRateLimiterPolicy {
         this.onFailure = this.executor.onFailure;
     }
     async execute(fn, signal = exports.neverAbortedSignal) {
-        const rateLimitStatus = await rateLimitExceeded(this.options.hash, this.options.maxWindowRequestCount, this.options.intervalInSeconds);
+        const rateLimitStatus = await rateLimitExceeded(this.options.hash, this.options.maxWindowRequestCount, this.options.windowLengthInSeconds);
         if (rateLimitStatus) {
             throw new Error(`Rate Limit Exceded`);
         }
@@ -37,9 +37,9 @@ function redisRateLimiter(policy, opts) {
     return new RedisRateLimiterPolicy(opts, new ExecuteWrapper(policy.options.errorFilter, policy.options.resultFilter));
 }
 exports.redisRateLimiter = redisRateLimiter;
-async function rateLimitExceeded(hash, maxWindowRequestCount = 5, intervalInSeconds = 1 * 60) {
+async function rateLimitExceeded(hash, maxWindowRequestCount = 5, windowLengthInSeconds = 1 * 60) {
     const MAX_WINDOW_REQUEST_COUNT = maxWindowRequestCount;
-    const WINDOW_LOG_INTERVAL_IN_SECONDS = intervalInSeconds;
+    const WINDOW_LOG_INTERVAL_IN_SECONDS = windowLengthInSeconds;
     const record = await redis.get(hash);
     const currentRequestTime = moment();
     if (!record) {
