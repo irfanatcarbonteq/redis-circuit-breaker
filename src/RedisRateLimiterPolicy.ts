@@ -30,7 +30,7 @@ export const neverAbortedSignal = new AbortController().signal;
 export interface ICircuitBreakerOptions {
   hash: string;
   maxWindowRequestCount: Number;
-  intervalInSeconds: Number;
+  windowLengthInSeconds: Number;
 }
 
 export class RedisRateLimiterPolicy implements IPolicy {
@@ -58,7 +58,7 @@ export class RedisRateLimiterPolicy implements IPolicy {
     const rateLimitStatus = await rateLimitExceeded(
       this.options.hash,
       this.options.maxWindowRequestCount,
-      this.options.intervalInSeconds
+      this.options.windowLengthInSeconds
     );
 
     if (rateLimitStatus) {
@@ -74,7 +74,7 @@ export function redisRateLimiter(
   opts: {
     hash: string;
     maxWindowRequestCount: Number;
-    intervalInSeconds: Number;
+    windowLengthInSeconds: Number;
   }
 ) {
   return new RedisRateLimiterPolicy(
@@ -86,10 +86,10 @@ export function redisRateLimiter(
 async function rateLimitExceeded(
   hash: string,
   maxWindowRequestCount: Number = 5,
-  intervalInSeconds: Number = 1 * 60
+  windowLengthInSeconds: Number = 1 * 60
 ): Promise<Boolean> {
   const MAX_WINDOW_REQUEST_COUNT = maxWindowRequestCount;
-  const WINDOW_LOG_INTERVAL_IN_SECONDS: Number = intervalInSeconds;
+  const WINDOW_LOG_INTERVAL_IN_SECONDS: Number = windowLengthInSeconds;
   const record = await redis.get(hash);
   const currentRequestTime = moment();
 

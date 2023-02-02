@@ -115,7 +115,7 @@ exports.handleRequest = async (req, res) => {
     const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
       hash: hash,
       maxWindowRequestCount: 5,
-      intervalInSeconds: 1 * 60,
+      windowLengthInSeconds: 1 * 60,
     });
 
   const data = await redisRateLimiterPolicy.execute(() =>database.getInfo(req.params.id));
@@ -153,7 +153,7 @@ exports.handleRequest = async (req, res) => {
     const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
       hash: hash,
       maxWindowRequestCount: 5,
-      intervalInSeconds: 1 * 60,
+      windowLengthInSeconds: 1 * 60,
     });
 
   
