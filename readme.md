@@ -106,7 +106,7 @@ import axios from "axios";
 import { rateLimiter,SlidingWindowCounterDriver } from "redis-sampling-breaker";
 
 exports.handleRequest = async (req, res) => {
-  const secret = process.env.SECRET_KEY
+  const secret = 'secret-key'
   const hash = crypto.createHash("md5").update(secret).digest("hex");
   const rateLimiterPolicy = rateLimiter(handleAll, {
     driver: new SlidingWindowCounterDriver({
@@ -132,7 +132,7 @@ import axios from "axios";
 import { rateLimiter,LeakyBucketDriver } from "redis-sampling-breaker";
 
 exports.handleRequest = async (req, res) => {
-  const secret = process.env.SECRET_KEY
+  const secret = 'secret-key'
   const hash = crypto.createHash("md5").update(secret).digest("hex");
   const rateLimiterPolicy = rateLimiter(handleAll, {
     driver: new LeakyBucketDriver({
@@ -169,7 +169,7 @@ const retryPolicy = retry(handleAll, {
   backoff: new ExponentialBackoff(),
 });
 exports.handleRequest = async (req, res) => {
-  const secret = process.env.SECRET_KEY
+  const secret = 'secret-key'
     const hash = crypto.createHash("md5").update(secret).digest("hex");
     const rateLimiterPolicy = rateLimiter(handleAll, {
       driver: new SlidingWindowCounterDriver({
