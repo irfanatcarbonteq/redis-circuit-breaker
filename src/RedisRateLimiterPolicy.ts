@@ -27,13 +27,7 @@ export const returnOrThrow = <R>(failure: FailureOrSuccess<R>) => {
 
 export const neverAbortedSignal = new AbortController().signal;
 
-export interface ICircuitBreakerOptions {
-  hash: string;
-  maxWindowRequestCount: Number;
-  windowLengthInSeconds: Number;
-}
-
-export class RedisRateLimiterPolicy implements IPolicy {
+export class RateLimiterPolicy implements IPolicy {
   declare readonly _altReturn: never;
 
   /**
@@ -47,7 +41,9 @@ export class RedisRateLimiterPolicy implements IPolicy {
   public readonly onFailure = this.executor.onFailure;
 
   constructor(
-    private readonly options: ICircuitBreakerOptions,
+    private readonly driverOptions: {
+      driver: SlidingWindowCounterDriver | LeakyBucketDriver;
+    },
     private readonly executor: ExecuteWrapper
   ) {}
 
@@ -55,11 +51,12 @@ export class RedisRateLimiterPolicy implements IPolicy {
     fn: (context: IDefaultPolicyContext) => PromiseLike<T> | T,
     signal = neverAbortedSignal
   ): Promise<T> {
-    const rateLimitStatus = await rateLimitExceeded(
-      this.options.hash,
-      this.options.maxWindowRequestCount,
-      this.options.windowLengthInSeconds
-    );
+    let rateLimitStatus = false;
+    if (this.driverOptions.driver instanceof SlidingWindowCounterDriver) {
+      rateLimitStatus = await rateLimitExceeded(this.driverOptions.driver);
+    } else {
+      rateLimitStatus = await leakyBuckedExceeded(this.driverOptions.driver);
+    }
 
     if (rateLimitStatus) {
       throw new Error(`Rate Limit Exceded`);
@@ -69,28 +66,22 @@ export class RedisRateLimiterPolicy implements IPolicy {
   }
 }
 
-export function redisRateLimiter(
+export function rateLimiter(
   policy: Policy,
-  opts: {
-    hash: string;
-    maxWindowRequestCount: Number;
-    windowLengthInSeconds: Number;
-  }
+  driverOptions: { driver: SlidingWindowCounterDriver | LeakyBucketDriver }
 ) {
-  return new RedisRateLimiterPolicy(
-    opts,
+  return new RateLimiterPolicy(
+    driverOptions,
     new ExecuteWrapper(policy.options.errorFilter, policy.options.resultFilter)
   );
 }
 
 async function rateLimitExceeded(
-  hash: string,
-  maxWindowRequestCount: Number = 5,
-  windowLengthInSeconds: Number = 1 * 60
-): Promise<Boolean> {
-  const MAX_WINDOW_REQUEST_COUNT = maxWindowRequestCount;
-  const WINDOW_LOG_INTERVAL_IN_SECONDS: Number = windowLengthInSeconds;
-  const record = await redis.get(hash);
+  driver: SlidingWindowCounterDriver
+): Promise<boolean> {
+  const MAX_WINDOW_REQUEST_COUNT = driver.maxWindowRequestCount;
+  const WINDOW_LOG_INTERVAL_IN_SECONDS: Number = driver.intervalInSeconds;
+  const record = await redis.get(driver.hash);
   const currentRequestTime = moment();
 
   if (!record) {
@@ -101,7 +92,7 @@ async function rateLimitExceeded(
     };
     newRecord.push(requestLog);
     await redis.set(
-      hash,
+      driver.hash,
       JSON.stringify(newRecord),
       "EX",
       Number(WINDOW_LOG_INTERVAL_IN_SECONDS)
@@ -151,10 +142,37 @@ async function rateLimitExceeded(
         requestCount: 1,
       });
     }
-    const expirationTime = await redis.ttl(hash);
-    await redis.set(hash, JSON.stringify(data), "EX", expirationTime);
+    const expirationTime = await redis.ttl(driver.hash);
+    await redis.set(driver.hash, JSON.stringify(data), "EX", expirationTime);
     return false;
   }
+}
+
+async function leakyBuckedExceeded(
+  driver: LeakyBucketDriver
+): Promise<boolean> {
+  const BUCKET_SIZE = driver.bucketSize;
+  const Fill_RATE: any = driver.fillRate;
+  const bucket_count = await redis.get(driver.hash);
+
+  if (!bucket_count) {
+    await redis.set(driver.hash, 0);
+    return false;
+  }
+  let bucket_count_number = parseInt(bucket_count);
+  bucket_count_number++;
+  await redis.set(driver.hash, bucket_count_number);
+  if (bucket_count_number > BUCKET_SIZE) {
+    return true;
+  }
+ 
+  setTimeout(async () => {
+    const bucket_count = await redis.get(driver.hash);
+    let bucket_count_number = parseInt(bucket_count);
+    bucket_count_number--;
+    await redis.set(driver.hash, bucket_count_number);
+  }, 1000 / Fill_RATE);
+  return false;
 }
 
 export class ExecuteWrapper {
@@ -193,5 +211,47 @@ export class ExecuteWrapper {
 
       return { error };
     }
+  }
+}
+
+export interface ISlidingWindowCounterDriver {
+  hash: string;
+  maxWindowRequestCount: Number;
+  intervalInSeconds: Number;
+}
+
+export class SlidingWindowCounterDriver implements ISlidingWindowCounterDriver {
+  hash: string;
+  maxWindowRequestCount: Number;
+  intervalInSeconds: Number;
+  constructor(driverOptions: {
+    hash: string;
+    maxWindowRequestCount: Number;
+    intervalInSeconds: Number;
+  }) {
+    this.hash = driverOptions.hash;
+    this.maxWindowRequestCount = driverOptions.maxWindowRequestCount;
+    this.intervalInSeconds = driverOptions.intervalInSeconds;
+  }
+}
+
+export interface ILeakyBucketDriver {
+  hash: string;
+  bucketSize: Number;
+  fillRate: Number;
+}
+
+export class LeakyBucketDriver implements ILeakyBucketDriver {
+  hash: string;
+  bucketSize: Number;
+  fillRate: Number;
+  constructor(driverOptions: {
+    hash: string;
+    bucketSize: Number;
+    fillRate: Number;
+  }) {
+    this.hash = driverOptions.hash;
+    this.bucketSize = driverOptions.bucketSize;
+    this.fillRate = driverOptions.fillRate;
   }
 }
