@@ -1,3 +1,3 @@
-export * from './RedisConsectiveBreaker';
-export * from './RedisSamplingBreaker';
-export * from './RedisRateLimiterPolicy';
+export * from './ConsectiveBreaker';
+export * from './SamplingBreaker';
+export * from './RateLimiterPolicy';

@@ -1,4 +1,4 @@
-import { CircuitState, IBreaker } from "cockatiel";
+import { CircuitState } from "cockatiel";
 import Redis from "ioredis";
 const redis = new Redis();
 
@@ -27,7 +27,7 @@ export interface ISamplingBreakerOptions {
   minimumRps?: number;
 }
 
-interface IRedisBreaker {
+interface IBreaker {
   /**
    * Called when a call succeeds.
    */
@@ -38,7 +38,7 @@ interface IRedisBreaker {
   failure(state: CircuitState): Promise<boolean>;
 }
 
-export class RedisSamplingBreaker implements IRedisBreaker {
+export class SamplingBreaker implements IBreaker {
   private readonly threshold: number;
   private readonly minimumRpms: number;
   private readonly duration: number;

@@ -2,7 +2,7 @@ import { CircuitState } from "cockatiel";
 import Redis from "ioredis";
 const redis = new Redis();
 
-interface IRedisBreaker {
+interface IBreaker {
     /**
      * Called when a call succeeds.
      */
@@ -13,7 +13,7 @@ interface IRedisBreaker {
     failure(state: CircuitState): Promise<boolean>;
 }
 
-export class RedisConsecutiveBreaker implements IRedisBreaker {
+export class ConsecutiveBreaker implements IBreaker {
 
   constructor(private readonly threshold: number) {}
 

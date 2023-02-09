@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RedisSamplingBreaker = void 0;
+exports.SamplingBreaker = void 0;
 const cockatiel_1 = require("cockatiel");
 const ioredis_1 = require("ioredis");
 const redis = new ioredis_1.default();
-class RedisSamplingBreaker {
+class SamplingBreaker {
     constructor({ threshold, duration: samplingDuration, minimumRps, }) {
         this.windows = [];
         this.currentWindow = 0;
@@ -121,5 +121,5 @@ class RedisSamplingBreaker {
         redis.set("windows", JSON.stringify(windows));
     }
 }
-exports.RedisSamplingBreaker = RedisSamplingBreaker;
-//# sourceMappingURL=RedisSamplingBreaker.js.map
+exports.SamplingBreaker = SamplingBreaker;
+//# sourceMappingURL=SamplingBreaker.js.map

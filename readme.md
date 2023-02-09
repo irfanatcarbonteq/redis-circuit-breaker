@@ -49,7 +49,7 @@ You should have a basic setup of nodejs project using typescript
 
 ### Prerequisites
 
-Should have a sound knowledge of Circuit Breaker, Rate Limiter and typescript.
+Should have a sound knowledge of Circuit Breaker, Rate Limiter and typescript. Redis should be installed on your machine
 
 ### Installation
 
@@ -65,15 +65,14 @@ Then go forth with sampling breaker:
 
 ```js
 import {
-  ConsecutiveBreaker,
   ExponentialBackoff,
   retry,
   handleAll,
   circuitBreaker,
   wrap,
 } from 'cockatiel';
-import { database } from './my-db';
-import { RedisSamplingBreaker } from "redis-sampling-breaker";
+import axios from "axios";
+import { SamplingBreaker } from "redis-sampling-breaker";
 // Create a retry policy that'll try whatever function we execute 3
 // times with a randomized exponential backoff.
 const retry = retry(handleAll, { maxAttempts: 3, backoff: new ExponentialBackoff() });
@@ -81,44 +80,69 @@ const retry = retry(handleAll, { maxAttempts: 3, backoff: new ExponentialBackoff
 // Create a circuit breaker that'll stop calling the executed function for 10
 // seconds if it fails 5 times in a row. This can give time for e.g. a database
 // to recover without getting tons of traffic.
-const circuitBreaker = circuitBreaker(handleAll, {
+const circuitBreakerPolicy = circuitBreaker(handleAll, {
   halfOpenAfter: 10 * 1000,
-  breaker: new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
+  breaker: new SamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
 });
 
 // Combine these! Create a policy that retries 3 times, calling through the circuit breaker
-const retryWithBreaker = wrap(retry, circuitBreaker);
+const retryWithBreaker = wrap(retry, circuitBreakerPolicy);
 
 exports.handleRequest = async (req, res) => {
-  const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
+  const data = await retryWithBreaker.execute(() => axios.get("http://127.0.0.1:8080"));
   return res.json(data);
 };
 ```
 
 
-With rate limiting policy:
+With rate limiting policy and sliding window counter driver:
 
 ```js
 import * as crypto from "crypto"
 import {
   handleAll,
 } from 'cockatiel';
-import { database } from './my-db';
-import { redisRateLimiter } from "redis-sampling-breaker";
+import axios from "axios";
+import { rateLimiter,SlidingWindowCounterDriver } from "redis-sampling-breaker";
 
 exports.handleRequest = async (req, res) => {
   const secret = process.env.SECRET_KEY
-    const hash = crypto
-    .createHmac('sha256', secret)
-    .update(req.ip)
-    .digest('hex')
-    const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
+  const hash = crypto.createHash("md5").update(secret).digest("hex");
+  const rateLimiterPolicy = rateLimiter(handleAll, {
+    driver: new SlidingWindowCounterDriver({
       hash: hash,
       maxWindowRequestCount: 5,
-      windowLengthInSeconds: 1 * 60,
-    });
+      intervalInSeconds: 1 * 60,
+    }),
+  });
 
-  const data = await redisRateLimiterPolicy.execute(() =>database.getInfo(req.params.id));
+  const data = await rateLimiterPolicy.execute(() => axios.get("http://127.0.0.1:8080"));
+  return res.json(data);
+};
+```
+
+With rate limiting policy and leaky bucket driver:
+
+```js
+import * as crypto from "crypto"
+import {
+  handleAll,
+} from 'cockatiel';
+import axios from "axios";
+import { rateLimiter,LeakyBucketDriver } from "redis-sampling-breaker";
+
+exports.handleRequest = async (req, res) => {
+  const secret = process.env.SECRET_KEY
+  const hash = crypto.createHash("md5").update(secret).digest("hex");
+  const rateLimiterPolicy = rateLimiter(handleAll, {
+    driver: new LeakyBucketDriver({
+      hash: hash,
+      bucketSize: 5,
+      fillRate: 10,
+    }),
+  });
+
+  const data = await rateLimiterPolicy.execute(() => axios.get("http://127.0.0.1:8080"));
   return res.json(data);
 };
 ```
@@ -132,12 +156,12 @@ import {
   retry,
   circuitBreaker
 } from 'cockatiel';
-import { database } from './my-db';
-import { redisRateLimiter,RedisSamplingBreaker } from "redis-sampling-breaker";
+import axios from "axios";
+import { rateLimiter,SamplingBreaker,SlidingWindowCounterDriver } from "redis-sampling-breaker";
 
 const circuitBreakerPolicy = circuitBreaker(handleAll, {
   halfOpenAfter: 10 * 1000,
-  breaker: new RedisSamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
+  breaker: new SamplingBreaker({ threshold: 0.2, duration: 30 * 1000 }),
 });
 
 const retryPolicy = retry(handleAll, {
@@ -146,19 +170,18 @@ const retryPolicy = retry(handleAll, {
 });
 exports.handleRequest = async (req, res) => {
   const secret = process.env.SECRET_KEY
-    const hash = crypto
-    .createHmac('sha256', secret)
-    .update(req.ip)
-    .digest('hex')
-    const redisRateLimiterPolicy = redisRateLimiter(handleAll, {
-      hash: hash,
-      maxWindowRequestCount: 5,
-      windowLengthInSeconds: 1 * 60,
+    const hash = crypto.createHash("md5").update(secret).digest("hex");
+    const rateLimiterPolicy = rateLimiter(handleAll, {
+      driver: new SlidingWindowCounterDriver({
+        hash: hash,
+        maxWindowRequestCount: 5,
+        intervalInSeconds: 1 * 60,
+      }),
     });
 
   
   const retryWithBreaker = wrap(redisRateLimiterPolicy,retryPolicy,circuitBreakerPolicy);
-  const data = await retryWithBreaker.execute(() =>database.getInfo(req.params.id));
+  const data = await retryWithBreaker.execute(() => axios.get("http://127.0.0.1:8080"));
   return res.json(data);
 };
 ```

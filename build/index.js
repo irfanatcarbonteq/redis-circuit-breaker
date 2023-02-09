@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-__exportStar(require("./RedisConsectiveBreaker"), exports);
-__exportStar(require("./RedisSamplingBreaker"), exports);
-__exportStar(require("./RedisRateLimiterPolicy"), exports);
+__exportStar(require("./ConsectiveBreaker"), exports);
+__exportStar(require("./SamplingBreaker"), exports);
+__exportStar(require("./RateLimiterPolicy"), exports);
 //# sourceMappingURL=index.js.map

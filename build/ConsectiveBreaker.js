@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RedisConsecutiveBreaker = void 0;
+exports.ConsecutiveBreaker = void 0;
 const ioredis_1 = require("ioredis");
 const redis = new ioredis_1.default();
-class RedisConsecutiveBreaker {
+class ConsecutiveBreaker {
     constructor(threshold) {
         this.threshold = threshold;
     }
@@ -25,5 +25,5 @@ class RedisConsecutiveBreaker {
         return parsedCount >= this.threshold;
     }
 }
-exports.RedisConsecutiveBreaker = RedisConsecutiveBreaker;
-//# sourceMappingURL=RedisConsectiveBreaker.js.map
+exports.ConsecutiveBreaker = ConsecutiveBreaker;
+//# sourceMappingURL=ConsectiveBreaker.js.map
